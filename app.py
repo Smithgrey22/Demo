@@ -1,38 +1,40 @@
-from flask import Flask, request, render_template, jsonify
-import sendgrid
-import os
-from sendgrid.helpers.mail import Mail
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
+from flask import Flask, request, render_template
+import smtplib
 
 app = Flask(__name__)
 
-# SendGrid API Key
-SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-SENDER_EMAIL = os.getenv("SENDER_EMAIL")
+# Yahoo SMTP Configuration
+SMTP_SERVER = "smtp.mail.yahoo.com"
+SMTP_PORT = 465
+EMAIL_ADDRESS = "financeoffical@yahoo.com"  # Replace with your Yahoo email
+EMAIL_PASSWORD = "plmzapspqrerxqdg"  # Use Yahoo App Password!
 
-def send_email(to_email, amount, sender_name):
-    sg = sendgrid.SendGridAPIClient(api_key=SENDGRID_API_KEY)
-    subject = "Bank Account Credit Notification"
-    content = f"Dear Customer,\n\nYour account has been credited with ${amount} from {sender_name}.\n\nThis is a simulated transaction."
-
-    mail = Mail(from_email=SENDER_EMAIL, to_emails=to_email, subject=subject, plain_text_content=content)
-    response = sg.send(mail)
-    return response.status_code
+def send_email(to_email, subject, message):
+    try:
+        server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
+        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+        email_body = f"Subject: {subject}\n\n{message}"
+        server.sendmail(EMAIL_ADDRESS, to_email, email_body)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
 
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
         recipient_email = request.form["email"]
-        amount = request.form["amount"]
-        sender_name = request.form["name"]
-        
-        send_email(recipient_email, amount, sender_name)
-        return jsonify({"message": "Transaction successful! Email sent."})
-    
+        subject = request.form["subject"]
+        message = request.form["message"]
+
+        success = send_email(recipient_email, subject, message)
+        if success:
+            return "✅ Email sent successfully!"
+        else:
+            return "❌ Failed to send email. Check your settings."
+
     return render_template("index.html")
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0")
+    app.run(debug=True, host="0.0.0.0", port=5000)
