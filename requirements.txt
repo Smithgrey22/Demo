@@ -1,0 +1,4 @@
+flask
+gunicorn
+smtplib
+python-dotenv
